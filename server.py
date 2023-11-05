@@ -1,50 +1,33 @@
-import multiprocessing
 import socket
 import hashlib
-import threading
+import select
+import protocol
 
-
-class Finder:
-
-    def __init__(self, md5_number, start, end):
-        self.ip = "127.0.0.1"
-        self.port = 80
+class Server:
+    def __init__(self):
         self.server_socket = socket.socket()
-        self.md5_number = md5_number
-        self.found = False
-        self.start = start
-        self.end = end
-
-    def find_secret(self):
-        for i in range(self.start, self.end):
-            if self.found:
-                print("a")
-                break
-            s = str(i).zfill(3)
-            ctypes = hashlib.md5(s.encode()).hexdigest()
-            if ctypes == self.md5_number:
-                print("b")
-                print(s)
-                self.found = True
-                return s
+        self.server_socket.bind(("0.0.0.0", 8000))
+        self.server_socket.listen(1)
 
 
-def main():
-    md5_number = "060fd70a06ead2e1079d27612b84aff4"
+    def loop(self):
+        client_sockets = []
+        while 1:
+            rlist, _, _ = select.select([self.server_socket]+client_sockets, [], [])
+            for current in rlist:
+                if current == self.server_socket:
+                    client_socket, client_adress = self.server_socket.accept()
+                    client_sockets.append(client_socket)
+                else:
+                    p = protocol.Protocol(current)
+                    res, msg = p.get_msg()
+                    if not res:
+                        client_sockets.remove(current)
+                    else:
+                        #secret
+                        #range
+                        #
 
-    threads = []
-    cpu_count = multiprocessing.cpu_count()
-    chunk = (10000-0)//cpu_count
-    for i in range(0, 10000, chunk):
-        finder_obj = Finder(md5_number, i, i + chunk)
-
-        thread = threading.Thread(target=finder_obj.find_secret)
-        threads.append(thread)
-        thread.start()
-
-    for thread in threads:
-        thread.join()
 
 
-if __name__ == "__main__":
-    main()
+
